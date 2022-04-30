@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"context"
 	"fmt"
 	"github.com/golang/glog"
 	"lproxy/internal/admin"
@@ -12,12 +13,13 @@ import (
 
 type Application struct {
 	configuration *Configuration
+	ctx           context.Context
 	auth          *auth.Auth
 	proxy         *proxy.Proxy
 	admin         *admin.Area
 }
 
-func NewApplication(configurationFilePath string) *Application {
+func NewApplication(configurationFilePath string, ctx context.Context) *Application {
 	configuration := parseConfiguration(configurationFilePath)
 	authorization := auth.NewAuth(configuration.Auth)
 	app := &Application{
@@ -25,6 +27,7 @@ func NewApplication(configurationFilePath string) *Application {
 		auth:          authorization,
 		proxy:         proxy.InitProxy(configuration.Proxy, authorization),
 		admin:         admin.InitAdminArea(configuration.Admin, authorization),
+		ctx:           ctx,
 	}
 
 	return app
@@ -55,9 +58,11 @@ func (a *Application) Run() {
 				a.configuration.Admin.Port),
 			a.admin.GetHandler()))
 	}()
+	<- a.ctx.Done()
+
 }
 
-func (a *Application) Stop() {
+func (a *Application) stop() {
 	a.proxy.Stop()
 	a.admin.Stop()
 	a.auth.Stop()

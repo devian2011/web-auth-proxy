@@ -5,6 +5,13 @@ import (
 	"io/ioutil"
 )
 
+
+func LoadStructuresFromDir(path string, structure interface{}) error {
+
+
+	return nil
+}
+
 func LoadStructureFromJsonFile(path string, structure interface{}) error {
 	if FileNotExists(path) {
 		err := ReaderError{Message: "File does not exists on path: " + path}
