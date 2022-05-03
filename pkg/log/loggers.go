@@ -1,59 +1,62 @@
 package log
 
 import (
-	"fmt"
 	"log"
-	"time"
 )
 
+
+type Formatter func(message Message) string
+
 type StdoutLogger struct {
+	formatter Formatter
 }
 
-func NewStdoutLogger() *StdoutLogger {
-	return &StdoutLogger{}
+type Color string
+
+const (
+	ColorBlack  Color = "\u001b[30m"
+	ColorRed          = "\u001b[31m"
+	ColorGreen        = "\u001b[32m"
+	ColorYellow       = "\u001b[33m"
+	ColorBlue         = "\u001b[34m"
+	ColorReset        = "\u001b[0m"
+)
+
+func (sl *StdoutLogger) colorize(color Color, message string) {
+	log.Println(string(color), message, string(ColorReset))
+}
+
+func NewStdoutLogger(formatter Formatter) *StdoutLogger {
+	return &StdoutLogger{
+		formatter: formatter,
+	}
 }
 
 func (sl *StdoutLogger) Write(message Message) {
-	msg := sl.buildMessage(message)
+	msg := sl.formatter(message)
 	if message.GetLevel() == CriticalLevel || message.GetLevel() == FatalLevel {
-		log.Fatalln(msg)
+		sl.colorize(ColorRed, msg)
 	} else {
 		log.Println(msg)
 	}
 }
 
-func (sl *StdoutLogger) buildMessage(msg Message) string {
-	date := time.Now()
-	return fmt.Sprintf(
-		"[%s] - [%s] Message: %s File: %s:%d Error: %v",
-		msg.GetLevel(),
-		date.Format("2006-01-02 15:03:04"),
-		msg.GetMessage(),
-		msg.GetFile(),
-		msg.GetLine(),
-		msg.GetError())
+type FileLoggerConfig struct {
+	Path string `json:"path"`
+	Level []Level `json:"level"`
 }
 
 type FileLogger struct {
+	formatter Formatter
 }
 
-func NewFileLogger() *FileLogger {
-	return &FileLogger{}
+func NewFileLogger(formatter Formatter) *FileLogger {
+	return &FileLogger{
+		formatter: formatter,
+	}
 }
 
 func (fl *FileLogger) Write(message Message) {
-	msg := fl.buildMessage(message)
-	log.Println(msg)
+	log.Println(fl.formatter(message))
 }
 
-func (fl *FileLogger) buildMessage(msg Message) string {
-	date := time.Now()
-	return fmt.Sprintf(
-		"[%s] - [%s] Message: %s File: %s:%d Error: %v",
-		msg.GetLevel(),
-		date.Format("2006-01-02 15:03:04"),
-		msg.GetMessage(),
-		msg.GetFile(),
-		msg.GetLine(),
-		msg.GetError())
-}

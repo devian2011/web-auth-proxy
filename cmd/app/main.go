@@ -10,15 +10,9 @@ import (
 	"syscall"
 )
 
-var (
-	configFile = flag.String("config", "./config/main.config.json", "Configuration file path")
-)
-
 func main() {
+	configDir := flag.String("configDir", "./config", "Configuration directory")
 	flag.Parse()
-	_ = flag.Lookup("log_dir").Value.Set("./logs")
-	_ = flag.Lookup("alsologtostderr").Value.Set("true")
-
 	ctx, stop := context.WithCancel(context.Background())
 
 	signals := make(chan os.Signal, 1)
@@ -30,12 +24,13 @@ func main() {
 	}()
 	defer func() {
 		if err := recover(); err != nil {
+			log.Println("Panic! Error: \n", err)
 			stop()
 		}
 	}()
 
 	log.Println("Application init...")
-	app := internal.NewApplication(*configFile, ctx)
+	app := internal.NewApplication(*configDir, ctx)
 	log.Println("Application is starting...")
 	app.Run()
 	log.Println("Application is running...")
