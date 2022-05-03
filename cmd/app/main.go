@@ -15,6 +15,16 @@ func main() {
 	flag.Parse()
 	ctx, stop := context.WithCancel(context.Background())
 
+	registerSignalShutdown(stop)
+	defer registerRecover(stop)
+	app, err := internal.NewApplication(*configDir, ctx)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	app.Run()
+}
+
+func registerSignalShutdown(stop context.CancelFunc) {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
@@ -22,17 +32,11 @@ func main() {
 		log.Println("Got system stop signal")
 		stop()
 	}()
-	defer func() {
-		if err := recover(); err != nil {
-			log.Println("Panic! Error: \n", err)
-			stop()
-		}
-	}()
-
-	log.Println("Application init...")
-	app := internal.NewApplication(*configDir, ctx)
-	log.Println("Application is starting...")
-	app.Run()
-	log.Println("Application is running...")
 }
 
+func registerRecover(stop context.CancelFunc) {
+	if err := recover(); err != nil {
+		log.Println("Panic! Error: \n", err)
+		stop()
+	}
+}

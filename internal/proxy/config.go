@@ -1,9 +1,14 @@
 package proxy
 
 type Config struct {
-	Host   string         `json:"host"`
-	Port   string         `json:"port"`
-	Points []*PointConfig `json:"points"`
+	Host      string         `json:"host"`
+	Port      string         `json:"port"`
+	PointsDir string         `json:"points_dir"`
+	Points    []*PointConfig `json:"points"`
+	Tls       *struct {
+		CertFile string `json:"cert_file"`
+		KeyFile  string `json:"key_file"`
+	} `json:"tls"`
 }
 
 type PointConfig struct {
@@ -11,7 +16,7 @@ type PointConfig struct {
 	Match struct {
 		Host string `json:"host"` // Host - regex
 		Path string `json:"path"` // Path - regex
-	} `json:"match"`                                                              // Pattern for identify proxy to point
+	} `json:"match"` // Pattern for identify proxy to point
 	TokenHeader                 string   `json:"token_header"`                    // Header that contains token for authentication
 	Destination                 string   `json:"destination"`                     // Proxy destination - URL
 	Providers                   []string `json:"providers"`                       // Authorization providers see internal/auth/providers

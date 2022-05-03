@@ -7,6 +7,10 @@ import (
 
 type Formatter func(message Message) string
 
+type StdoutLoggerConfig struct {
+	Level []Level `json:"level"`
+}
+
 type StdoutLogger struct {
 	formatter Formatter
 }
@@ -48,11 +52,13 @@ type FileLoggerConfig struct {
 
 type FileLogger struct {
 	formatter Formatter
+	path string
 }
 
-func NewFileLogger(formatter Formatter) *FileLogger {
+func NewFileLogger(formatter Formatter, path string) *FileLogger {
 	return &FileLogger{
 		formatter: formatter,
+		path: path,
 	}
 }
 
