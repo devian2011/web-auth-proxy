@@ -2,9 +2,9 @@ package auth
 
 import (
 	"fmt"
-	"github.com/golang/glog"
 	"lproxy/internal/auth/providers"
 	"lproxy/internal/auth/providers/db"
+	"lproxy/pkg/log"
 )
 
 type authError struct {
@@ -17,17 +17,23 @@ func (ae *authError) Error() string {
 
 type Auth struct {
 	providers map[string]providers.Provider
+	errCh     chan log.Message
 }
 
-func NewAuth(config *Config) *Auth {
-	auth := &Auth{providers: make(map[string]providers.Provider, 0)}
+func NewAuth(config *Config, errCh chan log.Message) *Auth {
+	auth := &Auth{
+		providers: make(map[string]providers.Provider, 0),
+		errCh:     errCh,
+	}
 	for _, v := range config.Providers {
 		provider, err := factory(v)
 		if err != nil {
-			glog.Error(err.Error())
+			errCh <- log.NewCriticalMessage(
+				fmt.Sprintf("Cannot create authorization provider: %s", v.Code), 32, "auth.go", err)
 		} else {
 			if _, ok := auth.providers[v.Code]; ok {
-				glog.Errorf("Authentication provider with code %s is already exists", v.Code)
+				errCh <- log.NewCriticalMessage(
+					fmt.Sprintf("Authentication provider with code %s is already exists", v.Code), 36, "auth.go", err)
 			} else {
 				auth.providers[v.Code] = provider
 			}
@@ -46,8 +52,8 @@ func (a *Auth) GetProvider(code string) (providers.Provider, error) {
 
 func (a *Auth) GetProvidersFromList(codes []string) map[string]providers.Provider {
 	result := make(map[string]providers.Provider, 0)
-	for _, code := range codes{
-		if v, ok := a.providers[code]; ok{
+	for _, code := range codes {
+		if v, ok := a.providers[code]; ok {
 			result[code] = v
 		}
 	}
@@ -65,7 +71,11 @@ func (a *Auth) GetProviderList() []string {
 
 func (a *Auth) Stop() {
 	for _, v := range a.providers {
-		v.Shutdown()
+		if e := v.Shutdown(); e != nil {
+			a.errCh <- log.NewErrorMessage(
+				fmt.Sprintf("Error on shutdown auth provider: %s", v.GetCode()), 76, "auth.go", e)
+		}
+
 	}
 }
 
@@ -73,7 +83,7 @@ func factory(config *providers.Config) (providers.Provider, error) {
 	switch config.Type {
 	case db.ProviderType:
 		if config.IsActive {
-			return db.NewDbProvider(config), nil
+			return db.NewDbProvider(config)
 		} else {
 			return nil, nil
 		}

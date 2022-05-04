@@ -3,7 +3,6 @@ package db
 import (
 	"errors"
 	"fmt"
-	"github.com/golang/glog"
 	"github.com/jmoiron/sqlx"
 	"github.com/jmoiron/sqlx/reflectx"
 	_ "github.com/lib/pq"
@@ -11,16 +10,16 @@ import (
 	"time"
 )
 
-func initDb(driver string, dsn string) *sqlx.DB {
+func initDb(driver string, dsn string) (*sqlx.DB, error) {
 	db, err := sqlx.Open(driver, dsn)
 	if err != nil {
-		glog.Error(err)
+		return nil, err
 	}
 	db.SetMaxIdleConns(4)
 	db.SetMaxOpenConns(8)
 	db.Mapper = reflectx.NewMapperFunc("json", strings.ToLower)
 
-	return db
+	return db, nil
 }
 
 type userRepository struct {

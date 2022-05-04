@@ -1,7 +1,6 @@
 package db
 
 import (
-	"github.com/golang/glog"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"lproxy/internal/auth/providers"
@@ -23,8 +22,11 @@ type Provider struct {
 	sessionRepo *sessionRepository
 }
 
-func NewDbProvider(config *providers.Config) *Provider {
-	db := initDb(config.Driver, config.Dsn)
+func NewDbProvider(config *providers.Config) (*Provider, error) {
+	db, err := initDb(config.Driver, config.Dsn)
+	if err != nil {
+		return nil, err
+	}
 	userRepo := initUserRepo(db)
 	roleRepo := initRoleRepo(db)
 	sessionRepo := initSessionRepo(db)
@@ -43,11 +45,11 @@ func NewDbProvider(config *providers.Config) *Provider {
 			sessionRepo: sessionRepo,
 			roleRepo:    roleRepo,
 		},
-	}
+	}, nil
 }
 
 func getSessionLifeTime(time int64) int64 {
-	if time <= 0{
+	if time <= 0 {
 		return int64(defaultLifeTime)
 	}
 	return 0
@@ -119,9 +121,6 @@ func (p *Provider) AuthorizeUser(username string, passwordHash string) (provider
 	}, nil
 }
 
-func (p *Provider) Shutdown() {
-	err := p.db.Close()
-	if err != nil {
-		glog.Exitf("Db connection cannot close: %s", err.Error())
-	}
+func (p *Provider) Shutdown() error {
+	return p.db.Close()
 }

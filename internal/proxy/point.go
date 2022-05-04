@@ -2,7 +2,6 @@ package proxy
 
 import (
 	"bytes"
-	"github.com/golang/glog"
 	"github.com/google/uuid"
 	"io/ioutil"
 	"lproxy/internal/auth/providers"
@@ -29,16 +28,16 @@ func PointInit(config *PointConfig, providers map[string]providers.Provider) *Po
 func (p *Point) isMatch(r *http.Request) bool {
 	matchHost, errHost := regexp.Match(p.config.Match.Host, []byte(r.Host))
 	if errHost != nil {
-		glog.Errorf(
-			"Regexp error for match point: %s regexp: %s with request: %s Error: %s",
-			p.code, p.config.Match.Host, r.Host, errHost.Error())
+		//glog.Errorf(
+		//	"Regexp error for match point: %s regexp: %s with request: %s Error: %s",
+		//	p.code, p.config.Match.Host, r.Host, errHost.Error())
 	}
 	if matchHost {
 		matchPath, errPath := regexp.Match(p.config.Match.Path, []byte(r.URL.Path))
 		if errPath != nil {
-			glog.Errorf(
-				"Regexp error for match point: %s path: %s with request: %s Error: %s",
-				p.code, p.config.Match.Path, r.URL.Path, errPath.Error())
+			//glog.Errorf(
+			//	"Regexp error for match point: %s path: %s with request: %s Error: %s",
+			//	p.code, p.config.Match.Path, r.URL.Path, errPath.Error())
 		}
 		return matchPath
 	}

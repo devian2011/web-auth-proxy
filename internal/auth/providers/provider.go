@@ -46,7 +46,7 @@ type Provider interface {
 	IsActive() bool
 	AuthenticateUser(token string) (Session, error)
 	AuthorizeUser(username string, passwordHash string) (Session, error)
-	Shutdown()
+	Shutdown() error
 }
 
 type Config struct {

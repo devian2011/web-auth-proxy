@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"log"
 	"lproxy/internal"
 	"os"
@@ -11,13 +10,14 @@ import (
 )
 
 func main() {
-	configDir := flag.String("configDir", "./config", "Configuration directory")
-	flag.Parse()
+
+	//configDir := flag.String("configDir", "./config/dev.config.json", "Configuration directory")
+	//flag.Parse()
 	ctx, stop := context.WithCancel(context.Background())
 
 	registerSignalShutdown(stop)
 	defer registerRecover(stop)
-	app, err := internal.NewApplication(*configDir, ctx)
+	app, err := internal.NewApplication("./config/dev.config.json", ctx)
 	if err != nil {
 		log.Fatalln(err)
 	}

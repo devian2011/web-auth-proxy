@@ -17,7 +17,7 @@ type Application struct {
 	auth          *auth.Auth
 	proxy         *proxy.Proxy
 	admin         *admin.Area
-	logger        *log.Handler
+	errCh         chan log.Message
 }
 
 func NewApplication(configurationFilePath string, ctx context.Context) (*Application, error) {
@@ -25,20 +25,21 @@ func NewApplication(configurationFilePath string, ctx context.Context) (*Applica
 	if err != nil {
 		return nil, err
 	}
-	authorization := auth.NewAuth(configuration.Auth)
+	errChan := handleLogs(configuration)
+	authorization := auth.NewAuth(configuration.Auth, errChan)
 	app := &Application{
 		configuration: configuration,
 		auth:          authorization,
-		proxy:         proxy.InitProxy(configuration.Proxy, authorization),
-		admin:         admin.InitAdminArea(configuration.Admin, authorization),
+		proxy:         proxy.InitProxy(configuration.Proxy, authorization, errChan),
+		admin:         admin.InitAdminArea(configuration.Admin, authorization, errChan),
 		ctx:           ctx,
-		logger:        initLogger(configuration),
+		errCh:         errChan,
 	}
 
 	return app, nil
 }
 
-func initLogger(configuration *Configuration) *log.Handler {
+func handleLogs(configuration *Configuration) chan log.Message {
 	handler := log.NewHandler()
 	if configuration.Logs.File != nil {
 		handler.AddLogger(
@@ -51,14 +52,21 @@ func initLogger(configuration *Configuration) *log.Handler {
 			log.NewStdoutLogger(log.StrFormatter))
 	}
 
-	return handler
+	ch := make(chan log.Message, 100)
+	go func() {
+		for msg := range ch {
+			handler.Handle(msg)
+		}
+	}()
+	return ch
 }
 
 func (a *Application) Run() {
 	proxyServer := a.proxyServerStart()
 	adminServer := a.adminServerStart()
+
 	<-a.ctx.Done()
-	proxyServerCtxStop, fnProxyStop := context.WithTimeout(a.ctx, 5 * time.Second)
+	proxyServerCtxStop, fnProxyStop := context.WithTimeout(a.ctx, 5*time.Second)
 	_ = proxyServer.Shutdown(proxyServerCtxStop)
 	adminServerCtxStop, fnAdminStop := context.WithTimeout(a.ctx, time.Second)
 	_ = adminServer.Shutdown(adminServerCtxStop)
@@ -66,7 +74,12 @@ func (a *Application) Run() {
 	defer func() {
 		fnProxyStop()
 		fnAdminStop()
+		close(a.errCh)
 	}()
+
+	a.proxy.Stop()
+	a.admin.Stop()
+	a.auth.Stop()
 }
 
 func (a *Application) proxyServerStart() *http.Server {
@@ -95,7 +108,7 @@ func (a *Application) proxyServerStart() *http.Server {
 			err = server.ListenAndServe()
 		}
 		if err != nil && err != http.ErrServerClosed {
-			a.logger.Handle(log.NewCriticalMessage("Cannot start proxy server", 102, "app.go", err))
+			a.errCh <- log.NewCriticalMessage("Cannot start proxy server", 102, "app.go", err)
 		}
 	}()
 
@@ -128,15 +141,9 @@ func (a *Application) adminServerStart() *http.Server {
 			err = server.ListenAndServe()
 		}
 		if err != nil && err != http.ErrServerClosed {
-			a.logger.Handle(log.NewCriticalMessage("Cannot start admin server", 135, "app.go", err))
+			a.errCh <- log.NewCriticalMessage("Cannot start admin server", 135, "app.go", err)
 		}
 	}()
 
 	return server
-}
-
-func (a *Application) stop() {
-	a.proxy.Stop()
-	a.admin.Stop()
-	a.auth.Stop()
 }

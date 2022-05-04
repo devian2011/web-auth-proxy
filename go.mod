@@ -8,7 +8,7 @@ require (
 	github.com/coreos/go-etcd v2.0.0+incompatible // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/go-redis/redis v6.15.9+incompatible
-	github.com/golang/glog v1.0.0 // indirect
+	//github.com/golang/glog v1.0.0 // indirect
 	github.com/google/uuid v1.1.4
 	github.com/gorilla/mux v1.8.0
 	github.com/jmoiron/sqlx v1.3.1 // indirect

@@ -36,8 +36,13 @@ func ParseConfiguration(main string) (*Configuration, error) {
 
 	err = filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
 		point := &proxy.PointConfig{}
-		_ = file.LoadStructureFromJsonFile(path, point)
-		config.Proxy.Points = append(config.Proxy.Points, point)
+		if !info.IsDir() {
+			unmarshalErr := file.LoadStructureFromJsonFile(path, point)
+			if unmarshalErr == nil {
+				config.Proxy.Points = append(config.Proxy.Points, point)
+			}
+		}
+
 		return nil
 	})
 
